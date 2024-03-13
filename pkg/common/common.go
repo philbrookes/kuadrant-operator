@@ -17,10 +17,15 @@ limitations under the License.
 package common
 
 import (
+	"crypto/sha256"
 	"fmt"
 	"strings"
 
+	"github.com/martinlindhe/base36"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	gatewayapiv1 "sigs.k8s.io/gateway-api/apis/v1"
+
+	"github.com/kuadrant/kuadrant-operator/pkg/library/utils"
 )
 
 // TODO: move the const to a proper place, or get it from config
@@ -79,4 +84,27 @@ func UnMarshallObjectKey(keyStr string) (client.ObjectKey, error) {
 	}
 
 	return client.ObjectKey{Namespace: keyStr[:namespaceEndIndex], Name: keyStr[namespaceEndIndex+1:]}, nil
+}
+
+// FilterValidSubdomains returns every subdomain that is a subset of at least one of the (super) domains specified in the first argument.
+func FilterValidSubdomains(domains, subdomains []gatewayapiv1.Hostname) []gatewayapiv1.Hostname {
+	arr := make([]gatewayapiv1.Hostname, 0)
+	for _, subsubdomain := range subdomains {
+		if _, found := utils.Find(domains, func(domain gatewayapiv1.Hostname) bool {
+			return utils.Name(subsubdomain).SubsetOf(utils.Name(domain))
+		}); found {
+			arr = append(arr, subsubdomain)
+		}
+	}
+	return arr
+}
+
+func ToBase36Hash(s string) string {
+	hash := sha256.Sum224([]byte(s))
+	// convert the hash to base36 (alphanumeric) to decrease collision probabilities
+	return strings.ToLower(base36.EncodeBytes(hash[:]))
+}
+
+func ToBase36HashLen(s string, l int) string {
+	return ToBase36Hash(s)[:l]
 }
