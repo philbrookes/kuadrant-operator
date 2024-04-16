@@ -20,6 +20,7 @@ import (
 
 	"github.com/kuadrant/kuadrant-operator/api/v1alpha1"
 	"github.com/kuadrant/kuadrant-operator/pkg/common"
+	"github.com/kuadrant/kuadrant-operator/pkg/library/utils"
 )
 
 var _ = Describe("DNSPolicy Single Cluster", func() {
@@ -37,10 +38,10 @@ var _ = Describe("DNSPolicy Single Cluster", func() {
 		CreateNamespace(&testNamespace)
 
 		var err error
-		err, clusterUID := common.GetClusterUID(ctx, k8sClient)
+		err, clusterUID := utils.GetClusterUID(ctx, k8sClient)
 		Expect(err).To(BeNil())
 
-		clusterID = common.ToBase36HashLen(clusterUID, common.ClusterIDLength)
+		clusterID = common.ToBase36HashLen(clusterUID, utils.ClusterIDLength)
 
 		gatewayClass = testBuildGatewayClass("foo", "default", "kuadrant.io/bar")
 		Expect(k8sClient.Create(ctx, gatewayClass)).To(Succeed())

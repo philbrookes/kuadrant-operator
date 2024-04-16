@@ -9,6 +9,7 @@ import (
 
 	"github.com/kuadrant/kuadrant-operator/api/v1alpha1"
 	"github.com/kuadrant/kuadrant-operator/pkg/common"
+	"github.com/kuadrant/kuadrant-operator/pkg/library/utils"
 )
 
 const (
@@ -33,7 +34,7 @@ func (t *GatewayTarget) GetName() string {
 }
 
 func (t *GatewayTarget) GetShortCode() string {
-	return common.ToBase36HashLen(t.GetName(), common.ClusterIDLength)
+	return common.ToBase36HashLen(t.GetName(), utils.ClusterIDLength)
 }
 
 // GroupTargetsByGeo groups targets based on Geo Code.
@@ -108,7 +109,7 @@ func (t *ClusterGatewayTarget) GetName() string {
 }
 
 func (t *ClusterGatewayTarget) GetShortCode() string {
-	return common.ToBase36HashLen(t.GetName(), common.ClusterIDLength)
+	return common.ToBase36HashLen(t.GetName(), utils.ClusterIDLength)
 }
 
 func (t *ClusterGatewayTarget) setGeo(defaultGeo v1alpha1.GeoCode) {

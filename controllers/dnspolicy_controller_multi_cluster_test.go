@@ -20,6 +20,7 @@ import (
 
 	"github.com/kuadrant/kuadrant-operator/api/v1alpha1"
 	"github.com/kuadrant/kuadrant-operator/pkg/common"
+	"github.com/kuadrant/kuadrant-operator/pkg/library/utils"
 	"github.com/kuadrant/kuadrant-operator/pkg/multicluster"
 )
 
@@ -38,10 +39,10 @@ var _ = Describe("DNSPolicy Multi Cluster", func() {
 		CreateNamespace(&testNamespace)
 
 		var err error
-		err, clusterID = common.GetClusterUID(ctx, k8sClient)
+		err, clusterID = utils.GetClusterUID(ctx, k8sClient)
 		Expect(err).To(BeNil())
 
-		clusterID = common.ToBase36HashLen(clusterID, common.ClusterIDLength)
+		clusterID = common.ToBase36HashLen(clusterID, utils.ClusterIDLength)
 
 		gatewayClass = testBuildGatewayClass("foo", "default", "kuadrant.io/bar")
 		Expect(k8sClient.Create(ctx, gatewayClass)).To(Succeed())
@@ -55,8 +56,8 @@ var _ = Describe("DNSPolicy Multi Cluster", func() {
 			Gateway
 		Expect(k8sClient.Create(ctx, gateway)).To(Succeed())
 
-		clusterOneIDHash = common.ToBase36HashLen(TestClusterNameOne, common.ClusterIDLength)
-		clusterTwoIDHash = common.ToBase36HashLen(TestClusterNameTwo, common.ClusterIDLength)
+		clusterOneIDHash = common.ToBase36HashLen(TestClusterNameOne, utils.ClusterIDLength)
+		clusterTwoIDHash = common.ToBase36HashLen(TestClusterNameTwo, utils.ClusterIDLength)
 		gwHash = common.ToBase36HashLen(gateway.Name+"-"+gateway.Namespace, 6)
 
 		//Set multi cluster gateway status

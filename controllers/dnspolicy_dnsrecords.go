@@ -44,7 +44,7 @@ func (r *DNSPolicyReconciler) reconcileDNSRecords(ctx context.Context, dnsPolicy
 
 func (r *DNSPolicyReconciler) reconcileGatewayDNSRecords(ctx context.Context, gw *gatewayapiv1.Gateway, dnsPolicy *v1alpha1.DNSPolicy) error {
 	log := crlog.FromContext(ctx)
-	err, clusterID := common.GetClusterUID(ctx, r.Client())
+	err, clusterID := utils.GetClusterUID(ctx, r.Client())
 	if err != nil {
 		return fmt.Errorf("failed to generate cluster ID: %w", err)
 	}
