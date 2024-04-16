@@ -44,7 +44,7 @@ func (r *DNSPolicyReconciler) reconcileDNSRecords(ctx context.Context, dnsPolicy
 
 func (r *DNSPolicyReconciler) reconcileGatewayDNSRecords(ctx context.Context, gw *gatewayapiv1.Gateway, dnsPolicy *v1alpha1.DNSPolicy) error {
 	log := crlog.FromContext(ctx)
-	err, clusterID := common.GetClusterUID(ctx, r.Client())
+	err, clusterID := utils.GetClusterUID(ctx, r.Client())
 	if err != nil {
 		return fmt.Errorf("failed to generate cluster ID: %w", err)
 	}
@@ -113,7 +113,7 @@ func (r *DNSPolicyReconciler) reconcileGatewayDNSRecords(ctx context.Context, gw
 }
 
 func (r *DNSPolicyReconciler) desiredDNSRecord(gateway *multicluster.GatewayWrapper, dnsPolicy *v1alpha1.DNSPolicy, targetListener gatewayapiv1.Listener, clusterGateways []multicluster.ClusterGateway, managedZone *kuadrantdnsv1alpha1.ManagedZone) (*kuadrantdnsv1alpha1.DNSRecord, error) {
-	ownerID := common.ToBase36HashLen(gateway.ClusterID, common.ClusterIDLength)
+	ownerID := common.ToBase36HashLen(gateway.ClusterID, utils.ClusterIDLength)
 	rootHost := string(*targetListener.Hostname)
 	var healthProtocol *string
 	var healthCheckSpec *kuadrantdnsv1alpha1.HealthCheckSpec
