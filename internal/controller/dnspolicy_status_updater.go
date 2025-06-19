@@ -40,6 +40,7 @@ func (r *DNSPolicyStatusUpdater) Subscription() controller.Subscription {
 			{Kind: &machinery.GatewayGroupKind},
 			{Kind: &kuadrantv1.DNSPolicyGroupKind},
 			{Kind: &DNSRecordGroupKind},
+			{Kind: &DNSHealthCheckProbeGroupKind},
 		},
 	}
 }

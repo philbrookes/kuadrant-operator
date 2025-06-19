@@ -235,6 +235,24 @@ spec:
                   rule: self.group == 'gateway.networking.k8s.io'
                 - message: Invalid targetRef.kind. The only supported values are 'Gateway'
                   rule: self.kind == 'Gateway'
+              unpublish:
+                description: Unpublish contains a list of rules, and unpublishing
+                  flags, if any rules evaluates to true for a listener it is unpublished
+                  in a manner that reflects the active flags
+                properties:
+                  allowEmptyGEOs:
+                    description: If true an unpublishing record will still be removed
+                      when it is the last record in a GEO
+                    type: boolean
+                  when:
+                    description: For each listener on the targetted gateway, if any
+                      of these rules evaluate to true it will be flagged for unpublishing
+                    items:
+                      type: string
+                    type: array
+                required:
+                - when
+                type: object
             required:
             - providerRefs
             - targetRef

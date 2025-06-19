@@ -421,12 +421,16 @@ func (b *BootOptionsBuilder) getDNSOperatorOptions() ([]controller.ControllerOpt
 		controller.WithRunnable("dnsrecord watcher", controller.Watch(
 			&kuadrantdnsv1alpha1.DNSRecord{}, DNSRecordResource, metav1.NamespaceAll,
 			controller.FilterResourcesByLabel[*kuadrantdnsv1alpha1.DNSRecord](fmt.Sprintf("%s=%s", AppLabelKey, AppLabelValue)))),
+		controller.WithRunnable("dnshealthcheckprobe watcher", controller.Watch(
+			&kuadrantdnsv1alpha1.DNSHealthCheckProbe{}, DNSHealthCheckResource, metav1.NamespaceAll)),
 		controller.WithObjectKinds(
 			DNSRecordGroupKind,
+			DNSHealthCheckProbeGroupKind,
 		),
 		controller.WithObjectLinks(
 			LinkListenerToDNSRecord,
 			LinkDNSPolicyToDNSRecord,
+			LinkDNSRecordToDNSHealthCheckProbes,
 		),
 	)
 

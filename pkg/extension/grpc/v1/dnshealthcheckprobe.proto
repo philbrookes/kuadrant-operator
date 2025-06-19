@@ -1,0 +1,39 @@
+syntax = "proto3";
+
+option go_package = "/v1";
+
+package kuadrant.v1;
+
+import "v1/common.proto";
+
+message DNSHealthCheckProbe {
+  Metadata metadata = 1;
+  DNSHealthCheckSpec spec = 2;
+  DNSHealthCheckStatus status = 3;
+
+}
+
+message DNSHealthCheckSpec {
+    int64 port = 1;
+    string hostname = 2;
+    string address = 3;
+    string path = 4;
+    string protocol = 5;
+    string interval = 6;
+    DNSHealthCheckAdditionalHeadersRef additionalHeadersRef = 7;
+    int64 failureThreshold = 8;
+    bool allowInsecureCertificate = 9;
+}
+
+message DNSHealthCheckAdditionalHeadersRef {
+    string name = 1;
+}
+
+message DNSHealthCheckStatus {
+  int64 lastCheckAt = 1;
+  int64 consecutiveFailures = 2;
+  string reason = 3;
+  int64 status = 4;
+  bool healthy = 5;
+  int64 observedGeneration = 6;
+}

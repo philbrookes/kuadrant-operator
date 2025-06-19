@@ -19,3 +19,5 @@ protoc -I=$SCRIPT_DIR -I=$SCRIPT_DIR/$1 --go_out=$SCRIPT_DIR $SCRIPT_DIR/$1/comm
 protoc -I=$SCRIPT_DIR -I=$SCRIPT_DIR/$1 --go_out=$SCRIPT_DIR --go-grpc_out=$SCRIPT_DIR $SCRIPT_DIR/$1/kuadrant.proto
 protoc -I=$SCRIPT_DIR -I=$SCRIPT_DIR/$1 --go_out=$SCRIPT_DIR $SCRIPT_DIR/$1/gateway_api.proto
 protoc -I=$SCRIPT_DIR -I=$SCRIPT_DIR/$1 --go_out=$SCRIPT_DIR $SCRIPT_DIR/$1/policy.proto
+protoc -I=$SCRIPT_DIR -I=$SCRIPT_DIR/$1 --go_out=$SCRIPT_DIR $SCRIPT_DIR/$1/dnsrecord.proto
+protoc -I=$SCRIPT_DIR -I=$SCRIPT_DIR/$1 --go_out=$SCRIPT_DIR $SCRIPT_DIR/$1/dnshealthcheckprobe.proto

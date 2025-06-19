@@ -1,0 +1,79 @@
+syntax = "proto3";
+
+option go_package = "/v1";
+
+package kuadrant.v1;
+
+import "v1/common.proto";
+
+message DNSRecord {
+  Metadata metadata = 1;
+  DNSRecordSpec spec = 2;
+  DNSRecordStatus status = 3;
+}
+
+message DNSRecordSpec {
+    repeated DNSRecordEndpoint endpoints = 1;
+    DNSRecordHealthCheck healthCheck = 2;
+    string rootHost = 3;
+    DNSRecordProviderRef providerRef = 4;
+}
+
+message DNSRecordEndpoint {
+    string dnsName = 1;
+    int64 recordTTL = 2;
+    string recordType = 3;
+    repeated string targets = 4;
+    repeated DNSRecordLabel labels = 5;
+    repeated DNSRecordProviderSpecific providerSpecific= 6;
+    string setIdentifier = 7;
+}
+
+message DNSRecordLabel {
+    string name = 1;
+    string value = 2;
+}
+
+message DNSRecordProviderSpecific {
+    string name = 1;
+    string value = 2;
+}
+
+message DNSRecordHealthCheck {
+    string path = 1;
+    int64 failureThreshold = 2;
+    int64 port = 3;
+    string protocol = 4;
+}
+
+message DNSRecordProviderRef {
+    string name = 1;
+}
+
+message DNSRecordStatus {
+  repeated Condition conditions = 1;
+  int64 observedGeneration = 2;
+  int64 queuedAt = 3;
+  int64 validFor = 4;
+  int64 writeCounter = 5;
+  repeated DNSRecordEndpoint endpoints = 6;
+  repeated DNSRecordEndpoint zoneEndpoints = 7;
+  DNSRecordStatusHealthCheck healthCheck = 8;
+  string ownerID = 9;
+  repeated string domainOwners = 10;
+  string zoneID = 11;
+  string zoneDomainName = 12;
+}
+
+message DNSRecordStatusHealthCheck {
+    repeated Condition conditions = 1;
+    repeated DNSRecordStatusHealthCheckProbe probes = 2;
+}
+
+message DNSRecordStatusHealthCheckProbe {
+    string id = 1;
+    string ipAddress = 2;
+    string host = 3;
+    bool synced = 4;
+    repeated Condition conditions = 5;
+}

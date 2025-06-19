@@ -4,8 +4,11 @@ import (
 	"context"
 	"fmt"
 	"reflect"
+	"strconv"
+	"strings"
 	"sync"
 
+	"github.com/google/cel-go/cel"
 	"github.com/samber/lo"
 
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
@@ -19,7 +22,9 @@ import (
 	"github.com/kuadrant/policy-machinery/machinery"
 
 	kuadrantv1 "github.com/kuadrant/kuadrant-operator/api/v1"
+	kuadrantCel "github.com/kuadrant/kuadrant-operator/internal/cel"
 	"github.com/kuadrant/kuadrant-operator/internal/utils"
+	extenstionUtils "github.com/kuadrant/kuadrant-operator/pkg/extension/utils"
 )
 
 var (
@@ -46,6 +51,7 @@ func (r *EffectiveDNSPoliciesReconciler) Subscription() controller.Subscription 
 			{Kind: &machinery.GatewayGroupKind},
 			{Kind: &kuadrantv1.DNSPolicyGroupKind},
 			{Kind: &DNSRecordGroupKind},
+			{Kind: &DNSHealthCheckProbeGroupKind},
 		},
 	}
 }
@@ -91,7 +97,6 @@ func (r *EffectiveDNSPoliciesReconciler) reconcile(ctx context.Context, _ []cont
 
 		var gatewayHasAttachedRoutes = false
 		var gatewayHasAddresses = false
-
 		for _, listener := range listeners {
 			lLogger := pLogger.WithValues("listener", listener.GetLocator())
 
@@ -116,7 +121,72 @@ func (r *EffectiveDNSPoliciesReconciler) reconcile(ctx context.Context, _ []cont
 				gatewayHasAttachedRoutes = true
 			}
 
-			desiredRecord, err := desiredDNSRecord(gateway.Gateway, clusterID, policy, *listener.Listener)
+			unpublish := false
+			unpublishReasons := []string{}
+
+			existingRecordObj, recordExists := lo.Find(topology.Objects().Children(listener), func(o machinery.Object) bool {
+				_, ok := o.(*kuadrantdnsv1alpha1.DNSRecord)
+				return ok && o.GetNamespace() == listener.GetNamespace() && o.GetName() == dnsRecordName(listener.Gateway.Name, string(listener.Name))
+			})
+
+			var existingHealthCheckObj machinery.Object
+			healthCheckExists := false
+			if recordExists {
+				existingHealthCheckObj, healthCheckExists = lo.Find(topology.Objects().Children(existingRecordObj), func(o machinery.Object) bool {
+					_, ok := o.(*kuadrantdnsv1alpha1.DNSHealthCheckProbe)
+					return ok
+				})
+			}
+
+			for _, unpublishRule := range policy.Spec.Unpublish.When {
+				program, err := kuadrantCel.Compile(string(unpublishRule), cel.BoolType)
+				if err != nil {
+					pLogger.Error(err, "error processing unpublish rule", "rule", unpublishRule)
+					continue
+				}
+				celObjects := map[string]any{
+					"policy":  extenstionUtils.DNSPolicyToProtobuf(policy),
+					"gateway": extenstionUtils.GatewayToProtobuf(gateway),
+				}
+				if recordExists {
+					existingRecord := existingRecordObj.(*kuadrantdnsv1alpha1.DNSRecord)
+					celObjects["dnsRecord"] = extenstionUtils.DNSRecordToProtobuf(existingRecord)
+
+					if healthCheckExists {
+						existingHealthCheck := existingHealthCheckObj.(*kuadrantdnsv1alpha1.DNSHealthCheckProbe)
+						celObjects["healthCheck"] = extenstionUtils.DNSHealthCheckToProtobuf(existingHealthCheck)
+					} else {
+						celObjects["healthCheck"] = extenstionUtils.DNSHealthCheckToProtobuf(&kuadrantdnsv1alpha1.DNSHealthCheckProbe{})
+					}
+				} else {
+					celObjects["dnsRecord"] = extenstionUtils.DNSRecordToProtobuf(&kuadrantdnsv1alpha1.DNSRecord{})
+					celObjects["healthCheck"] = extenstionUtils.DNSHealthCheckToProtobuf(&kuadrantdnsv1alpha1.DNSHealthCheckProbe{})
+				}
+				unpublishVal, _, err := program.Eval(celObjects)
+				if err != nil {
+					lLogger.Error(err, "error evaluating unpublish rule", "rule", unpublishRule)
+					continue
+				}
+				if unpublishVal.Value() == true {
+					unpublish = true
+					unpublishReasons = append(unpublishReasons, "unpublish rule evaluated to true: "+string(unpublishRule))
+				}
+			}
+
+			existingUnpublishStatus := utils.FindStatusCondition(policy.Status.Conditions, "unpublish listener "+string(*listener.Hostname))
+			status := metav1.ConditionStatus(utils.UcaseFirst(strconv.FormatBool(unpublish)))
+			unpublishCondition := metav1.Condition{
+				Type:               "unpublish_listener_" + string(*listener.Hostname),
+				Status:             status,
+				LastTransitionTime: utils.CalculateTransitionTime(existingUnpublishStatus, status),
+				Reason:             "unpublish_rules",
+			}
+			if unpublish {
+				unpublishCondition.Message = strings.Join(unpublishReasons, "\n")
+			}
+			policy.Status.Conditions = utils.UpdateOrAddCondition(policy.Status.Conditions, unpublishCondition)
+			lLogger.Info("policy status updated: ", "status", policy.Status)
+			desiredRecord, err := desiredDNSRecord(gateway.Gateway, clusterID, policy, *listener.Listener, !unpublish)
 			if err != nil {
 				lLogger.Error(err, "failed to build desired dns record")
 				continue
@@ -128,11 +198,6 @@ func (r *EffectiveDNSPoliciesReconciler) reconcile(ctx context.Context, _ []cont
 
 			resource := r.client.Resource(DNSRecordResource).Namespace(desiredRecord.GetNamespace())
 
-			existingRecordObj, recordExists := lo.Find(topology.Objects().Children(listener), func(o machinery.Object) bool {
-				_, ok := o.(*controller.RuntimeObject).Object.(*kuadrantdnsv1alpha1.DNSRecord)
-				return ok && o.GetNamespace() == listener.GetNamespace() && o.GetName() == dnsRecordName(listener.Gateway.Name, string(listener.Name))
-			})
-
 			if len(desiredRecord.Spec.Endpoints) == 0 {
 				policyErrors[policy.GetLocator()] = ErrNoAddresses
 			}
@@ -141,7 +206,7 @@ func (r *EffectiveDNSPoliciesReconciler) reconcile(ctx context.Context, _ []cont
 			if recordExists {
 				rLogger := lLogger.WithValues("record", existingRecordObj.GetLocator())
 
-				existingRecord := existingRecordObj.(*controller.RuntimeObject).Object.(*kuadrantdnsv1alpha1.DNSRecord)
+				existingRecord := existingRecordObj.(*kuadrantdnsv1alpha1.DNSRecord)
 
 				// Deal with the potential deletion of a record first
 				if !hasAttachedRoute || len(desiredRecord.Spec.Endpoints) == 0 {
@@ -270,7 +335,7 @@ func (r *EffectiveDNSPoliciesReconciler) deleteOrphanDNSRecords(ctx context.Cont
 func (r *EffectiveDNSPoliciesReconciler) deleteRecord(ctx context.Context, obj machinery.Object) {
 	logger := controller.LoggerFromContext(ctx)
 
-	record := obj.(*controller.RuntimeObject).Object.(*kuadrantdnsv1alpha1.DNSRecord)
+	record := obj.(*kuadrantdnsv1alpha1.DNSRecord)
 	if record.GetDeletionTimestamp() != nil {
 		return
 	}

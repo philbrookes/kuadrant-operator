@@ -66,7 +66,22 @@ type DNSPolicySpec struct {
 	// ExcludeAddresses is a list of addresses (either hostnames, CIDR or IPAddresses) that DNSPolicy should not use as values in the configured DNS provider records. The default is to allow all addresses configured in the Gateway DNSPolicy is targeting
 	// +optional
 	ExcludeAddresses ExcludeAddresses `json:"excludeAddresses,omitempty"`
+
+	// Unpublish contains a list of rules, and unpublishing flags, if any rules evaluates to true for a listener it is unpublished in a manner that reflects the active flags
+	// +optional
+	Unpublish Unpublish `json:"unpublish,omitempty"`
 }
+
+type Unpublish struct {
+	// If true an unpublishing record will still be removed when it is the last record in a GEO
+	AllowEmptyGEOs bool `json:"allowEmptyGEOs,omitempty"`
+	// For each listener on the targetted gateway, if any of these rules evaluate to true it will be flagged for unpublishing
+	When Rules `json:"when"`
+}
+
+type Rules []Rule
+
+type Rule string
 
 // +kubebuilder:validation:MaxItems=20
 type ExcludeAddresses []string

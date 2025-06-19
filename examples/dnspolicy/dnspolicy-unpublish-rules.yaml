@@ -12,5 +12,12 @@ spec:
     - name: ${TEST_DNS_PROVIDER_SECRET_NAME}
   loadBalancing:
     weight: 120
-    geo: GEO-EU
+    geo: ${TEST_DNS_GEO_EU}
     defaultGeo: true
+  healthCheck:
+    path: "/healthz"
+  unpublish:
+    when:
+      - gateway.hasNoListeners()
+      - dnsRecord.hasOtherOwners() != true
+      - healthCheck.isUnhealthy() != true

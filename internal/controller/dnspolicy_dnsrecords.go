@@ -23,7 +23,7 @@ func dnsRecordName(gatewayName, listenerName string) string {
 	return fmt.Sprintf("%s-%s", gatewayName, listenerName)
 }
 
-func desiredDNSRecord(gateway *gatewayapiv1.Gateway, clusterID string, dnsPolicy *kuadrantv1.DNSPolicy, targetListener gatewayapiv1.Listener) (*kuadrantdnsv1alpha1.DNSRecord, error) {
+func desiredDNSRecord(gateway *gatewayapiv1.Gateway, clusterID string, dnsPolicy *kuadrantv1.DNSPolicy, targetListener gatewayapiv1.Listener, publish bool) (*kuadrantdnsv1alpha1.DNSRecord, error) {
 	rootHost := string(*targetListener.Hostname)
 	var healthCheckSpec *kuadrantdnsv1alpha1.HealthCheckSpec
 
@@ -48,6 +48,7 @@ func desiredDNSRecord(gateway *gatewayapiv1.Gateway, clusterID string, dnsPolicy
 			APIVersion: kuadrantdnsv1alpha1.GroupVersion.String(),
 		},
 		Spec: kuadrantdnsv1alpha1.DNSRecordSpec{
+			Publish:  publish,
 			RootHost: rootHost,
 			ProviderRef: kuadrantdnsv1alpha1.ProviderRef{
 				// Currently we only allow a single providerRef to be added. When that changes, we will need to update this to deal with multiple records.
@@ -56,6 +57,7 @@ func desiredDNSRecord(gateway *gatewayapiv1.Gateway, clusterID string, dnsPolicy
 			HealthCheck: healthCheckSpec,
 		},
 	}
+
 	dnsRecord.Labels[LabelListenerReference] = string(targetListener.Name)
 
 	endpoints, err := buildEndpoints(clusterID, string(*targetListener.Hostname), gateway, dnsPolicy)

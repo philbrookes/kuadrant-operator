@@ -26,6 +26,7 @@ import (
 
 const (
 	DNSRecordKind             = "DNSRecord"
+	DNSHealthCheckProbeKind   = "DNSHealthCheckProbe"
 	StateDNSPolicyAcceptedKey = "DNSPolicyValid"
 	StateDNSPolicyErrorsKey   = "DNSPolicyErrors"
 
@@ -34,8 +35,10 @@ const (
 )
 
 var (
-	DNSRecordResource  = kuadrantdnsv1alpha1.GroupVersion.WithResource("dnsrecords")
-	DNSRecordGroupKind = schema.GroupKind{Group: kuadrantdnsv1alpha1.GroupVersion.Group, Kind: DNSRecordKind}
+	DNSRecordResource            = kuadrantdnsv1alpha1.GroupVersion.WithResource("dnsrecords")
+	DNSRecordGroupKind           = schema.GroupKind{Group: kuadrantdnsv1alpha1.GroupVersion.Group, Kind: DNSRecordKind}
+	DNSHealthCheckResource       = kuadrantdnsv1alpha1.GroupVersion.WithResource("dnshealthcheckprobes")
+	DNSHealthCheckProbeGroupKind = schema.GroupKind{Group: kuadrantdnsv1alpha1.GroupVersion.Group, Kind: DNSHealthCheckProbeKind}
 )
 
 //+kubebuilder:rbac:groups=core,resources=namespaces,verbs=get;list;watch
@@ -67,12 +70,28 @@ func LinkListenerToDNSRecord(objs controller.Store) machinery.LinkFunc {
 		To:   DNSRecordGroupKind,
 		Func: func(child machinery.Object) []machinery.Object {
 			return lo.FilterMap(listeners, func(l *machinery.Listener, _ int) (machinery.Object, bool) {
-				if dnsRecord, ok := child.(*controller.RuntimeObject).Object.(*kuadrantdnsv1alpha1.DNSRecord); ok {
+				if dnsRecord, ok := child.(*kuadrantdnsv1alpha1.DNSRecord); ok {
 					return l, l.GetNamespace() == dnsRecord.GetNamespace() &&
 						dnsRecord.GetName() == dnsRecordName(l.Gateway.Name, string(l.Name))
 				}
 				return nil, false
 			})
+		},
+	}
+}
+
+func LinkDNSRecordToDNSHealthCheckProbes(objs controller.Store) machinery.LinkFunc {
+	dnsRecords := lo.Map(objs.FilterByGroupKind(DNSRecordGroupKind), controller.ObjectAs[*kuadrantdnsv1alpha1.DNSRecord])
+	return machinery.LinkFunc{
+		From: DNSRecordGroupKind,
+		To:   DNSHealthCheckProbeGroupKind,
+		Func: func(child machinery.Object) (parents []machinery.Object) {
+			if dnsHealthCheckProbe, ok := child.(*kuadrantdnsv1alpha1.DNSHealthCheckProbe); ok {
+				return lo.FilterMap(dnsRecords, func(dnsRecord *kuadrantdnsv1alpha1.DNSRecord, _ int) (machinery.Object, bool) {
+					return dnsRecord, utils.IsOwnedBy(dnsHealthCheckProbe, dnsRecord)
+				})
+			}
+			return nil
 		},
 	}
 }
@@ -84,7 +103,7 @@ func LinkDNSPolicyToDNSRecord(objs controller.Store) machinery.LinkFunc {
 		From: kuadrantv1.DNSPolicyGroupKind,
 		To:   DNSRecordGroupKind,
 		Func: func(child machinery.Object) []machinery.Object {
-			if dnsRecord, ok := child.(*controller.RuntimeObject).Object.(*kuadrantdnsv1alpha1.DNSRecord); ok {
+			if dnsRecord, ok := child.(*kuadrantdnsv1alpha1.DNSRecord); ok {
 				return lo.FilterMap(policies, func(dnsPolicy *kuadrantv1.DNSPolicy, _ int) (machinery.Object, bool) {
 					return dnsPolicy, utils.IsOwnedBy(dnsRecord, dnsPolicy)
 				})
