@@ -101,3 +101,5 @@ require (
 	sigs.k8s.io/randfill v1.0.0 // indirect
 	sigs.k8s.io/structured-merge-diff/v4 v4.6.0 // indirect
 )
+
+replace github.com/kuadrant/dns-operator => github.com/philbrookes/dns-operator v0.0.0-20251003074205-016a58a73d46

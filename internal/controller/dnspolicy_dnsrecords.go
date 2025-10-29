@@ -65,11 +65,17 @@ func desiredDNSRecord(gateway *gatewayapiv1.Gateway, clusterID string, dnsPolicy
 
 	dnsRecord.Labels[LabelListenerReference] = string(targetListener.Name)
 
-	endpoints, err := buildEndpoints(clusterID, string(*targetListener.Hostname), gateway, dnsPolicy)
-	if err != nil {
-		return nil, fmt.Errorf("failed to generate dns record for a gateway %s in %s ns: %w", gateway.Name, gateway.Namespace, err)
+	// Add endpoints if group is absent or present and active, otherwise empty endpoints will result in this dnsRecord being deleted
+	if !dnsPolicy.HasGroup() || dnsPolicy.Spec.Group.IsActive() {
+		endpoints, err := buildEndpoints(clusterID, string(*targetListener.Hostname), gateway, dnsPolicy)
+		if err != nil {
+			return nil, fmt.Errorf("failed to generate dns record for a gateway %s in %s ns: %w", gateway.Name, gateway.Namespace, err)
+		}
+		dnsRecord.Spec.Endpoints = endpoints
 	}
-	dnsRecord.Spec.Endpoints = endpoints
+
+	dnsRecord.Spec.Group = dnsPolicy.Spec.Group
+
 	return dnsRecord, nil
 }
 

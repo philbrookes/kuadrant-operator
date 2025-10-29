@@ -72,6 +72,8 @@ type DNSPolicySpec struct {
 
 	// +kubebuilder:validation:XValidation:rule="self == oldSelf",message="delegate is immutable"
 	Delegate bool `json:"delegate,omitempty"`
+
+	Group *dnsv1alpha1.DNSGroupSpec `json:"group,omitempty"`
 }
 
 // +kubebuilder:validation:MaxItems=20
@@ -216,6 +218,10 @@ func (p *DNSPolicy) GetStatus() kuadrantgatewayapi.PolicyStatus {
 
 func (p *DNSPolicy) Kind() string {
 	return DNSPolicyGroupKind.Kind
+}
+
+func (p *DNSPolicy) HasGroup() bool {
+	return p.Spec.Group != nil
 }
 
 //+kubebuilder:object:root=true
