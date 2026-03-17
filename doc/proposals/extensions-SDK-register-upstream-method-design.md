@@ -391,21 +391,17 @@ Support registering upstreams that require authentication on the gRPC connection
 
 ## Demo
 
-The demo uses the already-deployed Authorino instance (part of the standard Kuadrant stack) to verify RegisterUpstreamMethod without deploying any new services. A sample `UpstreamPolicy` extension (`cmd/extensions/upstream-policy/`) registers a gRPC upstream specified in its spec as an extension-managed upstream.
+The demo uses the already-deployed Authorino instance (part of the standard Kuadrant stack) to verify RegisterUpstreamMethod without deploying any new services. The existing `UpstreamPolicy` extension (`cmd/extensions/upstream-policy/`) registers Authorino's gRPC endpoint as an extension-managed upstream.
 
-The demo shows:
+An interactive demo script (`examples/extension/demo.sh`) walks through the following steps, pausing at each for discussion:
 
-- An `ext-` prefixed Envoy cluster is created targeting the upstream gRPC address
-- The cluster is loaded and healthy in the Istio gateway proxy (verified via Envoy admin API)
-- Deleting the UpstreamPolicy removes the cluster (cleanup)
-- A corresponding `ext-` prefixed wasm service entry is injected when a data-plane policy (AuthPolicy/RateLimitPolicy) also targets the gateway — the WasmPlugin is only created when ActionSets exist
+1. **Apply UpstreamPolicy** — registers Authorino's gRPC address as an extension-managed upstream
+2. **Verify Envoy cluster** — an `ext-` prefixed cluster is created and healthy in the Istio gateway proxy (verified via Envoy admin API)
+3. **Apply AuthPolicy** — triggers WasmPlugin creation so that wasm service entries become observable (temporary requirement until extensions can define their own ActionSets)
+4. **Verify wasm service entry** — an `ext-` prefixed entry appears in the WasmPlugin config alongside the built-in `auth-service`
+5. **Cleanup** — deleting the UpstreamPolicy and AuthPolicy removes the cluster and wasm service entry
 
 ## Execution
-
-### Todo
-
-- [ ] Create demo walkthrough and interactive demo script ([#1797](https://github.com/Kuadrant/kuadrant-operator/issues/1797))
-  - [ ] Interactive demo script or walkthrough document
 
 ### Completed
 
@@ -422,6 +418,10 @@ The demo shows:
   - [x] Istio: EnvoyFilter cluster creation, wasm service injection via mutateWasmConfig
   - [x] EnvoyGateway: EnvoyPatchPolicy cluster creation, wasm service injection via mutateWasmConfig
   - [x] Sample `UpstreamPolicy` extension (`cmd/extensions/upstream-policy/`) for local verification
+- [x] Create demo walkthrough and interactive demo script ([#1797](https://github.com/Kuadrant/kuadrant-operator/issues/1797))
+  - [x] UpstreamPolicy manifest targeting Authorino's gRPC address
+  - [x] AuthPolicy manifest to trigger WasmPlugin creation so wasm service entries are observable
+  - [x] Interactive demo script (`examples/extension/demo.sh`)
 
 ## Change Log
 
