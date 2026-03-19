@@ -1,0 +1,18 @@
+---
+# Minimal AuthPolicy targeting the gateway.
+# This triggers WasmPlugin creation so that extension-registered wasm service
+# entries become observable in the WasmPlugin config.
+apiVersion: kuadrant.io/v1
+kind: AuthPolicy
+metadata:
+  name: demo-auth
+  namespace: gateway-system
+spec:
+  targetRef:
+    group: gateway.networking.k8s.io
+    kind: Gateway
+    name: kuadrant-ingressgateway
+  rules:
+    authentication:
+      "anonymous":
+        anonymous: {}

@@ -1,0 +1,14 @@
+---
+# UpstreamPolicy that registers Authorino's gRPC endpoint as an extension-managed upstream.
+# This uses the already-deployed Authorino instance from the Kuadrant stack.
+apiVersion: extensions.kuadrant.io/v1alpha1
+kind: UpstreamPolicy
+metadata:
+  name: demo-upstream
+  namespace: kuadrant-system
+spec:
+  targetRef:
+    group: gateway.networking.k8s.io
+    kind: Gateway
+    name: kuadrant-ingressgateway
+  url: "grpc://authorino-authorino-authorization.kuadrant-system.svc.cluster.local:50051"
