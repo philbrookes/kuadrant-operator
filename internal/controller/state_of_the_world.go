@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"reflect"
 	"sort"
+	"strings"
 	"sync"
 
 	istiosecurity "istio.io/client-go/pkg/apis/security/v1"
@@ -626,6 +627,21 @@ func (b *BootOptionsBuilder) getExtensionsOptions() []controller.ControllerOptio
 	}
 
 	extensionsDir := env.GetString("EXTENSIONS_DIR", "/extensions")
+
+	// Pull extension binaries from OCI images if EXTENSION_IMAGES is set
+	extensionImages := env.GetString("EXTENSION_IMAGES", "")
+	if extensionImages != "" {
+		imageRefs := strings.Split(extensionImages, ",")
+		// Use a writable directory for OCI-pulled extensions
+		ociExtDir := env.GetString("EXTENSIONS_OCI_DIR", "/tmp/extensions")
+		b.logger.Info("Pulling extension images", "images", imageRefs, "destDir", ociExtDir)
+		if err := extension.PullExtensionImages(imageRefs, ociExtDir, b.logger.WithName("oci-extensions")); err != nil {
+			b.logger.Error(err, "failed to pull extension images")
+		} else {
+			extensionsDir = ociExtDir
+			b.logger.Info("Extension images pulled successfully", "extensionsDir", extensionsDir)
+		}
+	}
 
 	extManager, err := extension.NewManager(extensionsDir, b.logger.WithName("extensions"), log.Sync, b.client)
 	if err != nil {
